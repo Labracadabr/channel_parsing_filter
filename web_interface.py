@@ -15,7 +15,7 @@ last = 'last_good_id'
 # поиск по regex
 patterns = [r'https://[^"]+\.jpg', r'https://[^"]+\.mp4', ]
 
-cooldown: int = 60*60*24*7   # за какой период искать дубликаты
+cooldown: int = 60*60*24*30   # за какой период искать дубликаты
 
 
 def get_first_media_url(soup_elem, message_id):
