@@ -26,7 +26,7 @@ def get_first_media_url(soup_elem, message_id):
                 match = re.findall(p, elem)
                 if match:
                     if str(message_id) in media.get('href'):
-                        return match
+                        return match[0]
                     else:
                         return None
 
@@ -68,10 +68,6 @@ def get_message_data(group, message_id):
     return output
 
 
-def next_post(msg_id):
-    return str(int(msg_id) + 1)
-
-
 def do_task(channel):
     # вспомнить последний пост
     with open(last, 'r') as f:
@@ -90,21 +86,16 @@ def do_task(channel):
             msg_link = msg.get('link').split('?')[0]
             last_good_id = int(msg_link.split('/')[-1])
             unix_time = msg.get('unix')
-            # pprint(msg)
-
             media_url = msg.get('media_url')
-            if not media_url:
-                msg_id = next_post(msg_id)
-                continue
 
-            # content = media_url if media_url else text
-            if not is_spam(content=media_url, unix_time=unix_time):
+            if media_url and not is_spam(content=media_url, unix_time=unix_time):
                 post_msg(text=msg_link)
-                msg_id = next_post(msg_id)
 
         else:  # если пост не найден
             not_found += 1
-        msg_id = next_post(msg_id)
+
+        # след пост
+        msg_id = str(int(msg_id) + 1)
     print('End reached')
     print('last', f'https://t.me/{channel}/{last_good_id}')
 
