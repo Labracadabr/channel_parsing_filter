@@ -32,10 +32,10 @@ def get_first_media_url(soup_elem, message_id):
 
 
 #  вытащить из поста данные
-def get_message_data(group, message_id):
+def get_message_data(group: str, message_id: int) -> dict | bool:
     link = f'https://t.me/{group}/{message_id}?embed=1&mode=tme'
     response = session.get(link)
-    print('request', group, message_id)
+    print('r', message_id)
     soup = BeautifulSoup(response.text, features="html.parser")
 
     # если пост не существует
@@ -68,41 +68,40 @@ def get_message_data(group, message_id):
     return output
 
 
-def do_task(channel):
-    # вспомнить последний пост
-    with open(last, 'r') as f:
-        msg_id = int(f.read())
-
+def do_task(channel: str, msg_id: int, far: bool):
     not_found = 0
-    last_good_id = msg_id
+    last_good_id = str(msg_id)
 
     # читать, пока не будет много ненайденных подряд
-    while not_found < 30:
+    while not_found < 30 or far:
         msg = get_message_data(channel, msg_id)
 
         # если пост существует
         if msg:
+            far = False
             not_found = 0
             msg_link = msg.get('link').split('?')[0]
-            last_good_id = int(msg_link.split('/')[-1])
+            last_good_id = msg_link.split('/')[-1]
             unix_time = msg.get('unix')
             media_url = msg.get('media_url')
+            if media_url:
+                file_id = media_url.split('/')[-1].split('.')[0]
+                # проверить уникальность
+                if not is_spam(content=file_id, unix_time=unix_time):
+                    # опубликовать
+                    post_msg(text=msg_link)
 
-            if media_url and not is_spam(content=media_url, unix_time=unix_time):
-                post_msg(text=msg_link)
+            # сохранить последний пост
+            with open(last, 'w') as f:
+                f.write(last_good_id)
 
         else:  # если пост не найден
             not_found += 1
 
         # след пост
-        msg_id = str(int(msg_id) + 1)
+        msg_id = msg_id + 1
     print('End reached')
     print('last', f'https://t.me/{channel}/{last_good_id}')
-
-    # сохранить последний пост
-    with open(last, 'w') as f:
-        f.write(str(last_good_id))
-    # break
 
 
 def is_spam(content, unix_time) -> bool:
@@ -118,7 +117,9 @@ def is_spam(content, unix_time) -> bool:
         old_time, old_text = old_msg
 
         # если найдена устаревшая запись
-        if unix_time - cooldown > old_time:
+        dif = unix_time - cooldown
+        # print('unix_time:', unix_time, 'dif:', dif, 'old_time:', old_time, )
+        if dif > old_time:
             mem_erase = old_msg  # пометить на удаление
 
         # если найдено повторение
